@@ -1,3 +1,5 @@
+import { db } from "./db";
+
 /** Banks the app knows about. `available: false` banks are shown but never scraped. */
 export const BANKS = [
   { id: "hnb", name: "HNB", website: "https://www.hnb.lk/personal/promotions/card-promotions" },
@@ -17,3 +19,15 @@ export const CARD_TYPES = ["CREDIT", "DEBIT"] as const;
 export const NETWORKS = ["ANY", "VISA", "MASTERCARD", "AMEX"] as const;
 export const TIERS = ["CLASSIC", "GOLD", "PLATINUM", "TITANIUM", "SIGNATURE", "INFINITE", "WORLD", "WORLD ELITE", "BLACK", "ELITE"] as const;
 export const FREQUENCIES = ["INSTANT", "DAILY", "WEEKLY"] as const;
+
+/** Make sure every known bank has a row. Safe to call repeatedly. */
+export async function ensureBanks() {
+  for (const b of BANKS) {
+    const available = !("available" in b) || b.available !== false;
+    await db.bank.upsert({
+      where: { id: b.id },
+      create: { id: b.id, name: b.name, website: b.website, available },
+      update: { name: b.name, website: b.website, available },
+    });
+  }
+}

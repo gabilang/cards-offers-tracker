@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/auth";
 import { db } from "@/lib/db";
 import { SCRAPERS } from "@/scrapers/registry";
-import { ensureBanks } from "@/scrapers/run";
+import { ensureBanks } from "@/lib/banks";
 import { triggerScrape } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,12 @@ const STATUS: Record<string, string> = {
   RUNNING: "bg-warn-soft text-warn-fg",
 };
 
-export default async function AdminScrapesPage() {
+export default async function AdminScrapesPage({ searchParams }: { searchParams: Promise<{ notice?: string; error?: string }> }) {
+  const { notice, error } = await searchParams;
   await requireAdmin();
+  const runsUrl = process.env.GITHUB_REPO
+    ? `https://github.com/${process.env.GITHUB_REPO}/actions/workflows/scrape.yml`
+    : null;
   await ensureBanks();
   const [banks, counts, runs, users] = await Promise.all([
     db.bank.findMany({ orderBy: { name: "asc" }, include: { scrapeRuns: { orderBy: { startedAt: "desc" }, take: 1 } } }),
@@ -31,7 +35,14 @@ export default async function AdminScrapesPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Scrapes</h1>
-          <p className="text-sm text-muted">{users} users · the worker scrapes every bank daily at 06:00 Sri Lanka time.</p>
+          <p className="text-sm text-muted">
+            {users} users · every bank is scraped daily at 06:00 Sri Lanka time
+            {runsUrl && (
+              <>
+                {" "}· <a href={runsUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">workflow runs ↗</a>
+              </>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link href="/admin/scrapes" className="btn">Refresh</Link>
@@ -40,6 +51,10 @@ export default async function AdminScrapesPage() {
           </form>
         </div>
       </div>
+
+      {notice && (
+        <p className={`card p-3 text-sm ${error ? "bg-warn-soft text-warn-fg" : "bg-accent-soft"}`}>{notice}</p>
+      )}
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">

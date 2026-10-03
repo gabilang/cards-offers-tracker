@@ -33,7 +33,12 @@ export async function findOffers(f: OfferFilters) {
     ...(f.banks?.length ? { bankId: { in: f.banks } } : {}),
     ...(f.category ? { category: f.category } : {}),
     ...(f.q
-      ? { OR: [{ title: { contains: f.q } }, { merchant: { contains: f.q } }, { description: { contains: f.q } }] }
+      ? {
+          // Postgres `contains` is case-sensitive unless told otherwise.
+          OR: (["title", "merchant", "description"] as const).map((field) => ({
+            [field]: { contains: f.q, mode: "insensitive" as const },
+          })),
+        }
       : {}),
   };
 

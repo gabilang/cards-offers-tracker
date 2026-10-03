@@ -1,4 +1,6 @@
 /**
+ * LOCAL DEVELOPMENT ONLY: never run this against the production database.
+ *
  * Development seed: bank rows plus two demo users with cards.
  * Run with `npm run seed`. Demo logins (local development only):
  *   demo-admin@example.test / demo-pass-2026  (admin; NTB Mastercard credit, HNB credit)
@@ -7,7 +9,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { ensureBanks } from "@/scrapers/run";
+import { ensureBanks } from "@/lib/banks";
 
 const PASSWORD = "demo-pass-2026";
 
