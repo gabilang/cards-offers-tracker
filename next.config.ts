@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Loaded at runtime by the admin "Scrape now" action; never bundle the browser automation library.
+  serverExternalPackages: ["playwright", "playwright-core"],
 };
 
 export default nextConfig;

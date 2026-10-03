@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String            @id @default(cuid())
+  email           String            @unique
+  name            String?
+  passwordHash    String
+  isAdmin         Boolean           @default(false)
+  digestFrequency String            @default("DAILY") // INSTANT | DAILY | WEEKLY
+  emailEnabled    Boolean           @default(true)
+  lastDigestAt    DateTime?
+  createdAt       DateTime          @default(now())
+  cards           UserCard[]
+  banks           UserBank[]
+  categories      UserCategory[]
+  notifications   NotificationLog[]
+}
+
+model Bank {
+  id            String      @id // slug, e.g. "hnb"
+  name          String
+  website       String
+  enabled       Boolean     @default(true)
+  available     Boolean     @default(true) // false when the bank cannot be scraped (e.g. bot protection)
+  lastScrapedAt DateTime?
+  offers        Offer[]
+  userCards     UserCard[]
+  followers     UserBank[]
+  scrapeRuns    ScrapeRun[]
+}
+
+model UserCard {
+  id       String  @id @default(cuid())
+  userId   String
+  bankId   String
+  cardType String // CREDIT | DEBIT
+  network  String  @default("ANY") // VISA | MASTERCARD | AMEX | ANY
+  tier     String? // e.g. PLATINUM, INFINITE, SIGNATURE
+  nickname String?
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bank     Bank    @relation(fields: [bankId], references: [id], onDelete: Cascade)
+}
+
+model UserBank {
+  userId String
+  bankId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bank   Bank   @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@id([userId, bankId])
+}
+
+model UserCategory {
+  userId   String
+  category String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, category])
+}
+
+model Offer {
+  id           String            @id @default(cuid())
+  bankId       String
+  externalId   String?
+  title        String
+  merchant     String?
+  description  String?
+  category     String? // shared category, see src/scrapers/normalize/category.ts
+  bankCategory String? // the bank's own label
+  discountText String?
+  discountPct  Float?
+  url          String?
+  imageUrl     String?
+  terms        String?
+  cardTypes    String            @default("[]") // JSON array of CREDIT | DEBIT
+  networks     String            @default("[]") // JSON array of VISA | MASTERCARD | AMEX
+  tiers        String            @default("[]") // JSON array
+  validFrom    DateTime?
+  validTo      DateTime?
+  recurrence   String? // e.g. "WED" or "SAT,SUN"
+  rawValidity  String?
+  contentHash  String            @unique
+  firstSeenAt  DateTime          @default(now())
+  lastSeenAt   DateTime          @default(now())
+  isActive     Boolean           @default(true)
+  bank         Bank              @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  notifications NotificationLog[]
+
+  @@index([bankId, isActive])
+  @@index([validTo])
+}
+
+model ScrapeRun {
+  id          String    @id @default(cuid())
+  bankId      String
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  status      String    @default("RUNNING") // RUNNING | SUCCESS | FAILED
+  offersFound Int       @default(0)
+  newOffers   Int       @default(0)
+  error       String?
+  bank        Bank      @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@index([bankId, startedAt])
+}
+
+model NotificationLog {
+  id      String   @id @default(cuid())
+  userId  String
+  offerId String
+  sentAt  DateTime @default(now())
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offer   Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offerId])
+}

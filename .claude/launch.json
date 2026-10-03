@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3001, "autoPort": false },
+    { "name": "mail", "runtimeExecutable": "npm", "runtimeArgs": ["run", "mail"], "port": 1025 }
+  ]
+}

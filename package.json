@@ -6,22 +6,49 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "scrape": "tsx scripts/scrape.ts",
+    "worker": "tsx scripts/worker.ts",
+    "test": "vitest run",
+    "db:migrate": "prisma migrate dev",
+    "postinstall": "prisma generate",
+    "mail": "tsx scripts/dev-mail.ts",
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
+    "chrono-node": "^2.10.1",
+    "next": "15.5.26",
+    "next-auth": "^5.0.0-beta.32",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^8.0.11",
+    "prisma": "^6.19.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.26"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "@types/smtp-server": "^3.5.13",
+    "dotenv": "^18.0.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.26",
-    "@eslint/eslintrc": "^3"
+    "mailparser": "^3.9.31",
+    "playwright": "^1.63.0",
+    "smtp-server": "^3.19.15",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }
