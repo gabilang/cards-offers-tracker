@@ -134,7 +134,7 @@ export default async function PreferencesPage({
           <div>
             <label className="label" htmlFor="digestFrequency">Email frequency</label>
             <select className="input" id="digestFrequency" name="digestFrequency" defaultValue={user.digestFrequency}>
-              <option value="INSTANT">As soon as new offers are found</option>
+              <option value="INSTANT">After every scrape</option>
               <option value="DAILY">Daily digest</option>
               <option value="WEEKLY">Weekly digest</option>
             </select>

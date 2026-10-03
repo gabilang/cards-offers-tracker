@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { BANKS } from "@/lib/banks";
+import { ensureBanks } from "@/lib/banks";
 import { closeBrowser } from "./browser";
 import { createHttpContext } from "./http";
 import { normalizeOffer } from "./normalize";
@@ -11,18 +11,6 @@ export interface BankRunResult {
   offersFound: number;
   newOffers: number;
   error?: string;
-}
-
-/** Make sure every known bank has a row. Safe to call repeatedly. */
-export async function ensureBanks() {
-  for (const b of BANKS) {
-    const available = !("available" in b) || b.available !== false;
-    await db.bank.upsert({
-      where: { id: b.id },
-      create: { id: b.id, name: b.name, website: b.website, available },
-      update: { name: b.name, website: b.website, available },
-    });
-  }
 }
 
 export async function scrapeBank(bankId: string): Promise<BankRunResult> {

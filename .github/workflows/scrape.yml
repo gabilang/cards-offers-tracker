@@ -1,0 +1,48 @@
+name: scrape
+
+on:
+  schedule:
+    - cron: "30 0 * * *" # 06:00 Asia/Colombo
+  workflow_dispatch:
+    inputs:
+      banks:
+        description: "Comma-separated bank ids (e.g. hnb,ntb). Empty = all banks."
+        required: false
+        default: ""
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium for the DFCC and Sampath scrapers
+        run: npx playwright install --with-deps chromium
+
+      - name: Scrape banks and email users
+        run: npm run worker -- --once
+        env:
+          SCRAPE_BANKS: ${{ github.event.inputs.banks }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DATABASE_URL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          APP_URL: ${{ secrets.APP_URL }}

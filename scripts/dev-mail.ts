@@ -20,6 +20,7 @@ const server = new SMTPServer({
     simpleParser(stream)
       .then((mail) => {
         const to = (Array.isArray(mail.to) ? mail.to[0] : mail.to)?.text.replace(/[^a-z0-9@.]/gi, "_") ?? "unknown";
+        mkdirSync(dir, { recursive: true }); // the folder may have been deleted while running
         const base = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, "-")}-${to}`);
         writeFileSync(`${base}.html`, `<!-- Subject: ${mail.subject} -->\n${mail.html || ""}`);
         writeFileSync(`${base}.txt`, `Subject: ${mail.subject}\nTo: ${to}\n\n${mail.text ?? ""}`);

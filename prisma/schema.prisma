@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled connection (Neon "-pooler" host) for the app
+  directUrl = env("DIRECT_URL") // direct connection, used by prisma migrate
 }
 
 model User {
@@ -81,7 +82,7 @@ model Offer {
   terms        String?
   cardTypes    String            @default("[]") // JSON array of CREDIT | DEBIT
   networks     String            @default("[]") // JSON array of VISA | MASTERCARD | AMEX
-  tiers        String            @default("[]") // JSON array
+  tiers        String            @default("[]") // JSON array (kept as text so SQLite-era code stays unchanged)
   validFrom    DateTime?
   validTo      DateTime?
   recurrence   String? // e.g. "WED" or "SAT,SUN"
