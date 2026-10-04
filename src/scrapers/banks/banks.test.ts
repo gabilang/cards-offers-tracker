@@ -39,6 +39,7 @@ describe("bank parsers (fixtures)", () => {
     expect(norm[0].merchant).toBe("Ashadi Jewellers");
     expect(norm[0].cardTypes).toContain("CREDIT");
     expect(norm[0].validFrom?.toISOString().slice(0, 10)).toBe("2026-04-01");
+    expect(norm[0].url).toBe("https://www.hnb.lk/card-promotion/search/3360");
   });
 
   it("combank", () => {
@@ -123,5 +124,6 @@ describe("bank parsers (fixtures)", () => {
     expect(pickme.validTo?.toISOString().slice(0, 10)).toBe("2026-10-04");
     expect(pickme.cardTypes.sort()).toEqual(["CREDIT", "DEBIT"]);
     expect(pickme.networks.sort()).toEqual(["MASTERCARD", "VISA"]);
+    expect(pickme.url).toBe("https://www.sampath.lk/sampath-cards/credit-card-offer/3282");
   });
 });

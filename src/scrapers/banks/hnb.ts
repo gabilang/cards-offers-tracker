@@ -26,7 +26,8 @@ export function mapHnb(p: HnbPromo): RawOffer {
     externalId: String(p.id),
     title: p.title,
     merchant: p.merchant,
-    url: `https://www.hnb.lk/personal/promotions/card-promotions/${p.id}`,
+    // HNB's single-page app serves offer details at /card-promotion/search/:id.
+    url: `https://www.hnb.lk/card-promotion/search/${p.id}`,
     imageUrl: p.thumb ? `https://venus.hnb.lk/${p.thumb}` : undefined,
     validityText: p.valid,
     validFrom: parseIso(p.from ?? fromMatch?.[1]),

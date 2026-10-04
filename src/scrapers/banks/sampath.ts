@@ -46,7 +46,7 @@ export function mapSampath(p: SampathPromo): RawOffer | null {
     validityText: text(period),
     // Only fall back to expire_on when the period text is missing.
     ...(period ? {} : { validTo: colomboDay(p.expire_on) ?? null }),
-    url: `${PAGE}?id=${p.id}`,
+    url: `${PAGE}/${p.id}`, // offer detail page, e.g. /sampath-cards/credit-card-offer/3282
     imageUrl: p.image_url,
     terms: strip(p.terms_and_conditions).slice(0, 2000),
     cardText: `${who} ${strip(p.promotion_details)} ${network}`,
