@@ -1,9 +1,11 @@
+import type { Offer } from "@prisma/client";
 import { db } from "@/lib/db";
 import { ensureBanks } from "@/lib/banks";
 import { closeBrowser } from "./browser";
 import { createHttpContext } from "./http";
 import { normalizeOffer } from "./normalize";
 import { SCRAPERS } from "./registry";
+import type { NormalizedOffer } from "./types";
 
 export interface BankRunResult {
   bankId: string;
@@ -11,6 +13,21 @@ export interface BankRunResult {
   offersFound: number;
   newOffers: number;
   error?: string;
+}
+
+const COMPARED = [
+  "externalId", "title", "merchant", "description", "category", "bankCategory", "discountText", "discountPct",
+  "url", "imageUrl", "terms", "cardTypes", "networks", "tiers", "validFrom", "validTo", "recurrence", "rawValidity",
+] as const;
+
+/** True when any stored field differs from the freshly scraped one (dates compared by value). */
+function offerChanged(prev: Offer, next: Record<(typeof COMPARED)[number], unknown>) {
+  return COMPARED.some((k) => {
+    const a = prev[k];
+    const b = next[k];
+    if (a instanceof Date || b instanceof Date) return (a as Date | null)?.getTime() !== (b as Date | null)?.getTime();
+    return (a ?? null) !== (b ?? null);
+  });
 }
 
 export async function scrapeBank(bankId: string): Promise<BankRunResult> {
@@ -27,26 +44,41 @@ export async function scrapeBank(bankId: string): Promise<BankRunResult> {
     const offers = raws.map((r) => normalizeOffer(bankId, r, now));
     const unique = [...new Map(offers.map((o) => [o.contentHash, o])).values()];
 
-    const existing = new Set(
-      (await db.offer.findMany({ where: { contentHash: { in: unique.map((o) => o.contentHash) } }, select: { contentHash: true } }))
-        .map((o) => o.contentHash),
+    const toRow = (o: NormalizedOffer) => ({
+      ...o,
+      cardTypes: JSON.stringify(o.cardTypes),
+      networks: JSON.stringify(o.networks),
+      tiers: JSON.stringify(o.tiers),
+    });
+    const hashes = unique.map((o) => o.contentHash);
+    // Bulk reads and writes: the database can be far away (e.g. Neon in Singapore),
+    // so one query per offer would add minutes per run.
+    const existing = new Map(
+      (await db.offer.findMany({ where: { contentHash: { in: hashes } } })).map((o) => [o.contentHash, o]),
     );
 
-    let newOffers = 0;
+    const fresh = unique.filter((o) => !existing.has(o.contentHash));
+    for (let i = 0; i < fresh.length; i += 500) {
+      await db.offer.createMany({
+        data: fresh.slice(i, i + 500).map((o) => ({ ...toRow(o), firstSeenAt: now, lastSeenAt: now })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Offers seen again: refresh lastSeenAt in one query, then rewrite only those whose details changed.
+    await db.offer.updateMany({
+      where: { contentHash: { in: [...existing.keys()] } },
+      data: { lastSeenAt: now, isActive: true },
+    });
+    let updated = 0;
     for (const o of unique) {
-      const data = {
-        ...o,
-        cardTypes: JSON.stringify(o.cardTypes),
-        networks: JSON.stringify(o.networks),
-        tiers: JSON.stringify(o.tiers),
-      };
-      if (existing.has(o.contentHash)) {
-        await db.offer.update({ where: { contentHash: o.contentHash }, data: { ...data, lastSeenAt: now, isActive: true } });
-      } else {
-        await db.offer.create({ data: { ...data, firstSeenAt: now, lastSeenAt: now } });
-        newOffers++;
+      const prev = existing.get(o.contentHash);
+      if (prev && offerChanged(prev, toRow(o))) {
+        await db.offer.update({ where: { contentHash: o.contentHash }, data: toRow(o) });
+        updated++;
       }
     }
+    const newOffers = fresh.length;
 
     // Offers no longer listed by the bank are retired.
     await db.offer.updateMany({
@@ -59,7 +91,7 @@ export async function scrapeBank(bankId: string): Promise<BankRunResult> {
       data: { status: "SUCCESS", finishedAt: new Date(), offersFound: unique.length, newOffers },
     });
     await db.bank.update({ where: { id: bankId }, data: { lastScrapedAt: new Date() } });
-    log(`${unique.length} offers (${newOffers} new)`);
+    log(`${unique.length} offers (${newOffers} new, ${updated} updated)`);
     return { bankId, status: "SUCCESS", offersFound: unique.length, newOffers };
   } catch (e) {
     const error = (e as Error).stack ?? String(e);

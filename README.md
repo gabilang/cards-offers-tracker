@@ -45,7 +45,9 @@ npm run worker   # scheduler: scrape daily at 06:00 Asia/Colombo, then send dige
 
 ## Deploy for free (Vercel + Neon + GitHub Actions + Brevo)
 
-The website runs on Vercel and the data lives in Neon Postgres. The daily scrape and the emails run on GitHub Actions ([`.github/workflows/scrape.yml`](.github/workflows/scrape.yml)), because a full scrape takes about 15 minutes and needs Chromium, which Vercel functions can't run. The admin "Scrape now" button starts that same workflow through the GitHub API.
+The website runs on Vercel and the data lives in Neon Postgres. The daily scrape and the emails run as a GitHub Actions workflow ([`.github/workflows/scrape.yml`](.github/workflows/scrape.yml)), because a full scrape takes about 15 minutes and needs Chromium, which Vercel functions can't run. The admin "Scrape now" button starts that same workflow through the GitHub API.
+
+The workflow runs on a **self-hosted runner**: your own computer, on a normal Sri Lankan internet connection. Commercial Bank, Nations Trust Bank and BOC return `403 Forbidden` to cloud servers, including GitHub's hosted runners, so the scrape can't run there. See [Self-hosted runner](#self-hosted-runner) below.
 
 1. **GitHub:** create a public repository and push `main` to it.
 2. **Neon** ([neon.tech](https://neon.tech)): create a project in the Singapore region (closest to Sri Lanka). From *Connect*, copy two connection strings: the **pooled** one (its host contains `-pooler`) and the **direct** one.
@@ -81,8 +83,28 @@ The website runs on Vercel and the data lives in Neon Postgres. The daily scrape
    | `GITHUB_DISPATCH_TOKEN` | the fine-grained token from step 4 |
 
    If you rename the Vercel project or add a domain, update `APP_URL` in both places.
-7. **First scrape:** in GitHub, go to *Actions → scrape → Run workflow*. When it finishes (about 15 minutes), the offers appear on the site. After that it runs every day at 06:00 Sri Lanka time.
-8. **Sign up:** open the Vercel URL and register with your `ADMIN_EMAILS` address and the invite code. Share the URL and the invite code with others.
+7. **Runner:** set up the self-hosted runner as described below.
+8. **First scrape:** in GitHub, go to *Actions → scrape → Run workflow*. When it finishes (about 15 minutes), the offers appear on the site. After that it runs every day at 06:00 Sri Lanka time.
+9. **Sign up:** open the Vercel URL and register with your `ADMIN_EMAILS` address and the invite code. Share the URL and the invite code with others.
+
+### Self-hosted runner
+
+The runner is GitHub's small background app that picks up workflow jobs on your machine. These steps are for macOS; Linux and Windows are similar.
+
+1. In the GitHub repo, go to *Settings → Actions → Runners → New self-hosted runner*. Choose **macOS** and **ARM64** (Apple Silicon) or **x64** (Intel).
+2. Run the *Download* and *Configure* commands GitHub shows, in a folder outside this project, e.g. `~/actions-runner`. Accept the default name and labels; the workflow only needs the `self-hosted` label.
+3. Install it as a background service so it starts at login and keeps running:
+   ```bash
+   cd ~/actions-runner && ./svc.sh install && ./svc.sh start
+   ```
+   The runner should show **Idle** under *Settings → Actions → Runners*.
+4. Make sure the computer is awake at 06:00 Sri Lanka time. On macOS, wake it every day at 05:55 (needs your password):
+   ```bash
+   sudo pmset repeat wakeorpoweron MTWRFSU 05:55:00
+   ```
+   A laptop must be plugged in with the lid open for this to work. If the computer is off or asleep, the job waits in the queue and starts as soon as the runner is back online, for up to 24 hours.
+
+**Security:** a self-hosted runner runs workflow code on your computer. This workflow only starts on its schedule or by hand, never on pull requests. In a **public** repo, also go to *Settings → Actions → General → "Approval for running fork pull request workflows from contributors"* and choose **Require approval for all external contributors**, so nobody else's pull request can run code on your machine without your approval. A private repo avoids the question entirely, but forks of public repos can't be made private.
 
 **Notes:**
 - A run with a failing bank is marked failed, and GitHub emails you. The other banks' offers and the user emails still go out.

@@ -4,6 +4,8 @@ import { renderPage } from "./browser";
 export const USER_AGENT =
   "Mozilla/5.0 (compatible; CardOffersTracker/0.1; personal offer aggregator; +https://github.com/)";
 const MIN_GAP_MS = 1200;
+// Some bank sites (e.g. People's Bank) can take 40+ seconds to respond.
+const REQUEST_TIMEOUT_MS = 90_000;
 const lastHit = new Map<string, number>();
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -24,7 +26,7 @@ async function request(url: string, init: RequestInit = {}, attempt = 1): Promis
     res = await fetch(url, {
       ...init,
       headers: { "User-Agent": USER_AGENT, "Accept-Language": "en", ...init.headers },
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       redirect: "follow",
     });
   } catch (e) {

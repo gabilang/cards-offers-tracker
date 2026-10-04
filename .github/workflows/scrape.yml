@@ -19,20 +19,24 @@ permissions:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Runs on your own machine (a GitHub self-hosted runner). Several banks return
+    # 403 to cloud/data-centre IPs such as GitHub's hosted runners, so the scrape
+    # has to run from a normal Sri Lankan connection. See README "Self-hosted runner".
+    runs-on: self-hosted
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
       - name: Install Chromium for the DFCC and Sampath scrapers
-        run: npx playwright install --with-deps chromium
+        # Browsers are cached on the runner machine, so this is quick after the first run.
+        run: npx playwright install chromium
 
       - name: Scrape banks and email users
         run: npm run worker -- --once
